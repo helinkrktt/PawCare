@@ -1,0 +1,22 @@
+name: flutter_application_1  # VEYA KENDİ PROJE ADINIZ
+description: A new Flutter project. # İsteğe bağlı açıklama
+publish_to: 'none' # Bunu ekleyin, paket yayınlamayacaksanız
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.1.0 <4.0.0' # Dart SDK versiyonu (örnek)
+
+dependencies:
+  flutter:
+    sdk: flutter
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  intl: ^0.18.1
+  image_picker: ^1.0.4
+  provider: ^6.0.5
+  # Diğer bağımlılıklar...
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
