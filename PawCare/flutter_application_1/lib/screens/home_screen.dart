@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Provider import
-import 'package:flutter_application_1/providers/pet_provider.dart'; // PetProvider import
+import 'package:provider/provider.dart';
+import 'package:lottie/lottie.dart';
+
+import 'package:flutter_application_1/providers/auth_provider.dart'; // AppDrawer için gerekli
+import 'package:flutter_application_1/providers/pet_provider.dart';
 import 'package:flutter_application_1/screens/add_pet_screen.dart';
-// Navigasyon için diğer ekranları import et
 import 'package:flutter_application_1/screens/pets_list_screen.dart';
-import 'package:flutter_application_1/screens/vaccination_screen.dart';
-import 'package:flutter_application_1/screens/medication_screen.dart';
-import 'package:flutter_application_1/screens/find_vet_screen.dart';
-import 'package:flutter_application_1/models/pet.dart'; // _buildPetList içinde Pet tipi için gerekli olabilir, kalsın.
-
-// *** GİRİŞ/KAYIT EKRANLARI İÇİN IMPORTLAR ***
-import 'package:flutter_application_1/screens/login_screen.dart';
-import 'package:flutter_application_1/screens/signup_screen.dart';
-
+import 'package:flutter_application_1/screens/vaccination_screen.dart'; // AppDrawer için gerekli
+import 'package:flutter_application_1/screens/medication_screen.dart'; // AppDrawer için gerekli
+import 'package:flutter_application_1/screens/find_vet_screen.dart';   // AppDrawer için gerekli
+import 'package:flutter_application_1/models/pet.dart'; // _buildPetList'teki Pet tipi için gerekli
+import 'package:flutter_application_1/screens/login_screen.dart';     // AppDrawer ve yönlendirme için gerekli
+import 'package:flutter_application_1/screens/signup_screen.dart';   // AppDrawer için gerekli (login/signup butonları)
+import 'package:flutter_application_1/screens/pet_details_screen.dart'; // _buildPetList onTap için gerekli
+import 'package:flutter_application_1/screens/chatbot_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,49 +26,59 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadInitialData();
-    });
+    // UI Test Modunda, AuthProvider zaten 'authenticated' başlayacağı için
+    // PetProvider constructor'ında sahte veri yüklüyorsa, burada ek bir şey yapmaya gerek yok.
+    // Eğer PetProvider'ın fetchPets simülasyonunu test etmek istiyorsanız:
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   _loadInitialDataIfNeeded();
+    // });
+    debugPrint("HomeScreen initState: UI Test Modu.");
   }
 
-  void _loadInitialData() {
-      // TODO: [Auth] Gerçek kimlik doğrulama eklendiğinde,
-      //       sadece giriş yapılmışsa fetchPets çağrılmalıdır.
-      final petProvider = Provider.of<PetProvider>(context, listen: false);
-      if (petProvider.pets.isEmpty && !petProvider.isLoadingPets) {
-        petProvider.fetchPets();
-      }
-  }
+  // void _loadInitialDataIfNeeded() { // Bu metot UI test modunda aktif olmayabilir
+  //   final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  //   if (authProvider.isLoggedIn) {
+  //     final petProvider = Provider.of<PetProvider>(context, listen: false);
+  //     if (petProvider.pets.isEmpty && !petProvider.isLoadingPets) {
+  //       debugPrint("HomeScreen: _loadInitialData - fetchPets (simülasyon) çağrılıyor.");
+  //       petProvider.fetchPets();
+  //     }
+  //   }
+  // }
 
   Future<void> _refreshData() async {
-    // TODO: [Auth] Giriş durumu kontrolü eklenebilir.
-    await Provider.of<PetProvider>(context, listen: false).fetchPets();
+    // UI Test Modunda API isteği atmıyoruz.
+    debugPrint("HomeScreen: _refreshData - Yenileme simülasyonu.");
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) { // mounted kontrolü eklendi
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Sayfa yenilendi (simülasyon)."))
+      );
+    }
   }
 
+  void _openChatbot() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ChatbotScreen()),
+    );
+    debugPrint("HomeScreen: Chatbot ekranı açılıyor...");
+  }
 
   @override
   Widget build(BuildContext context) {
     final petProvider = context.watch<PetProvider>();
-     // TODO: [Auth] Burayı gerçek Auth Provider'dan okuyun:
-     // final bool isLoggedIn = context.watch<AuthProvider>().isLoggedIn;
-     const bool isLoggedIn = false; // Geçici - 'dead_code' uyarıları normal
+    // AuthProvider'ı build metodu içinde doğrudan kullanmıyoruz, AppDrawer kullanıyor.
+    // const bool isLoggedIn = true; // Bu satır AppDrawer'da yönetiliyor.
 
     return Scaffold(
       backgroundColor: const Color(0xFFFDFDFD),
-      drawer: const AppDrawer(),
+      drawer: const AppDrawer(), // AppDrawer isLoggedIn'i AuthProvider'dan alacak
       appBar: AppBar(
         title: const Text('PawCare'),
         backgroundColor: Colors.teal,
         elevation: 0,
-         actions: [
-           if (!isLoggedIn)
-             TextButton(
-               onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
-               },
-               child: const Text('Giriş Yap', style: TextStyle(color: Colors.white)),
-             ),
-         ],
+        // actions: const [], // AppDrawer'daki isLoggedIn'e göre ayarlanacak
       ),
       body: RefreshIndicator(
         onRefresh: _refreshData,
@@ -79,53 +90,35 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- Hoş Geldin Mesajı ---
-                // TODO: [Auth] Giriş yapmış kullanıcının adını göster
-                 // Hata düzeltildi: const eklendi
-                Text(
-                  isLoggedIn ? 'Tekrar Hoş Geldin! 👋' : 'Merhaba! 👋',
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                const Text(
+                  'Hoş Geldin! 👋 (UI Test Modu)',
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
                 ),
                 const SizedBox(height: 8),
-                // Hata düzeltildi: const eklendi
-                 Text(
-                  isLoggedIn ? 'Evcil dostların seni bekliyor.' : 'Evcil dostlarının bakımı burada başlıyor.',
-                  style: const TextStyle(fontSize: 16, color: Colors.black54),
+                const Text(
+                  'Evcil dostların seni bekliyor.',
+                  style: TextStyle(fontSize: 16, color: Colors.black54),
                 ),
                 const SizedBox(height: 20),
-
-                // --- Ana Görsel ---
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(15),
-                  child: Image.network(
-                    'https://cdn.pixabay.com/photo/2017/09/25/13/12/dog-2785074_960_720.jpg',
-                     height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      height: 200,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: const Icon(Icons.error_outline, size: 50, color: Colors.grey),
-                    ),
-                     loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
+                Center(
+                  child: Lottie.asset(
+                    'assets/lottie/dog_animation.json', // KENDİ LOTTIE DOSYA YOLUNUZ
+                    width: 250,
+                    height: 250,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      debugPrint("Ana Ekran Lottie Hatası: $error");
                       return Container(
-                        height: 200,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.teal.shade200),
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                : null,
+                        width: 250, height: 250, color: Colors.grey[200],
+                        child: const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error_outline, color: Colors.red, size: 40),
+                              SizedBox(height: 8),
+                              Text("Animasyon yüklenemedi", textAlign: TextAlign.center, style: TextStyle(color: Colors.red)),
+                              Text("Dosya yolunu kontrol edin", textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
+                            ],
                           ),
                         ),
                       );
@@ -133,41 +126,52 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // --- İçerik Alanı (Giriş Durumuna Göre) ---
-                if (isLoggedIn)
-                  // Giriş yapılmışsa evcil hayvanları göster ('dead_code' uyarısı normal)
-                  _buildLoggedInContent(context, petProvider)
-                else
-                  // Giriş yapılmamışsa giriş/kayıt butonlarını göster (canlı kod)
-                  _buildLoggedOutContent(context),
-
-                const SizedBox(height: 80), // FAB için boşluk
+                _buildLoggedInContent(context, petProvider), // Bu metot her zaman çağrılacak (isLoggedIn drawer'da)
+                const SizedBox(height: 80),
               ],
             ),
           ),
         ),
       ),
-      // FloatingActionButton (Sadece giriş yapılmışsa görünür, 'dead_code' uyarısı normal)
-      floatingActionButton: isLoggedIn
-          ? FloatingActionButton(
+      floatingActionButton: Stack( // Birden fazla FAB için Stack
+        children: <Widget>[
+          Positioned(
+            left: 32.0,
+            bottom: 16.0,
+            child: FloatingActionButton(
+              heroTag: 'chatbotFab',
+              onPressed: _openChatbot,
+              backgroundColor: Colors.orangeAccent,
+              tooltip: 'Pati ile Sohbet Et',
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Lottie.asset(
+                  'assets/lottie/chat_icon.json', // KENDİ CHATBOT LOTTIE DOSYA YOLUNUZ
+                  width: 40, height: 40,
+                  errorBuilder: (ctx, err, st) => const Icon(Icons.chat_bubble_outline, color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 16.0,
+            bottom: 16.0,
+            child: FloatingActionButton(
+              heroTag: 'addPetFab',
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AddPetScreen()),
-                );
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const AddPetScreen()));
               },
               backgroundColor: Colors.teal,
               tooltip: 'Yeni Evcil Hayvan Ekle',
               child: const Icon(Icons.add, color: Colors.white),
-            )
-          : null,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  // Giriş Yapılmış Kullanıcı İçeriğini Oluşturan Widget
   Widget _buildLoggedInContent(BuildContext context, PetProvider petProvider) {
-    // Bu blok 'dead_code' uyarısı alacaktır (isLoggedIn = false)
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -179,14 +183,13 @@ class _HomeScreenState extends State<HomeScreen> {
               'Evcil Hayvanların 🐾',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Color(0xFF333333)),
             ),
-            if (petProvider.pets.isNotEmpty)
-              TextButton(
-                onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const PetsListScreen()));
-                },
-                style: TextButton.styleFrom(foregroundColor: Colors.teal.shade700),
-                child: const Text('Tümünü Gör'),
-              )
+            TextButton(
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const PetsListScreen()));
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.teal.shade700),
+              child: const Text('Tümünü Gör'),
+            )
           ],
         ),
         const SizedBox(height: 12),
@@ -195,63 +198,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Giriş Yapmamış Kullanıcı İçeriğini Oluşturan Widget
-  Widget _buildLoggedOutContent(BuildContext context) {
-    // Bu blok canlı koddur (isLoggedIn = false)
-    return Center(
-      child: Column(
-        children: [
-          const SizedBox(height: 20),
-           Text( // const kaldırıldı (style const değil)
-            "Tüm özelliklere erişmek için giriş yapın veya kayıt olun.",
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: (){
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-            ),
-            child: const Text("Giriş Yap"),
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton(
-            onPressed: (){
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const SignUpScreen()));
-            },
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Colors.teal),
-              foregroundColor: Colors.teal,
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-            ),
-            child: const Text("Kayıt Ol"),
-          ),
-        ],
-      ),
-    );
-  }
+  // _buildLoggedOutContent metodu artık doğrudan build içinde kullanılmıyor,
+  // isLoggedIn AppDrawer'da yönetiliyor ve MyApp ana ekranı belirliyor.
+  // Eğer yine de burada tutmak isterseniz:
+  // Widget _buildLoggedOutContent(BuildContext context) { ... }
 
-
-  // Evcil Hayvan Listesini (ilk 3) Oluşturan Yardımcı Widget
   Widget _buildPetList(PetProvider petProvider) {
-    if (petProvider.isLoadingPets && petProvider.pets.isEmpty) {
-      return const Center(child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 30.0),
-        child: CircularProgressIndicator(color: Colors.teal),
-      ));
-    }
-    if (petProvider.petsErrorMessage != null && petProvider.pets.isEmpty) {
-      return Center(child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 30.0),
-        child: Text('Hata: ${petProvider.petsErrorMessage}', style: const TextStyle(color: Colors.red)),
-      ));
-    }
-    if (petProvider.pets.isEmpty) {
+    if (petProvider.pets.isEmpty) { // isLoadingPets ve petsErrorMessage kontrolleri eklenebilir
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 30.0, horizontal: 15.0),
@@ -261,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
             border: Border.all(color: Colors.teal.withAlpha((255 * 0.2).round()))
          ),
         child: const Center(child: Text(
-              'Henüz evcil hayvan eklemediniz.\nSağ alttaki (+) butonuna dokunarak başlayın!',
+              'Henüz evcil hayvan eklenmedi.\n(UI Test Modu)',
                textAlign: TextAlign.center,
                style: TextStyle(color: Colors.teal, fontSize: 15, height: 1.5),
                )),
@@ -269,12 +222,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final petsToShow = petProvider.pets.take(3).toList();
+    // HATA DÜZELTİLDİ: ListView.builder'a itemCount ve itemBuilder eklendi
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: petsToShow.length,
-      itemBuilder: (context, index) {
-        final pet = petsToShow[index];
+      itemCount: petsToShow.length, // BU SATIR GEREKLİ
+      itemBuilder: (context, index) { // BU SATIR GEREKLİ
+        final Pet pet = petsToShow[index];
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 6),
           elevation: 1.5,
@@ -287,11 +241,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             title: Text(pet.name, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
             subtitle: Text('${pet.species} - ${pet.breed}', style: const TextStyle(color: Colors.black54)),
-            trailing: Icon(Icons.chevron_right, color: Colors.grey.shade400), // const kaldırıldı
+            trailing: Icon(Icons.chevron_right, color: Colors.grey.shade400),
             onTap: (){
-              // TODO: [Navigation] Evcil Hayvan Detay Sayfasına Git
-              // Navigator.push(context, MaterialPageRoute(builder: (context) => PetDetailScreen(petId: pet.id)));
-               // print("Pet Tapped: ${pet.name}"); // Debug için bırakıldı (avoid_print uyarısı normal)
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PetDetailsScreen(petId: pet.id),
+                ),
+              );
             },
           ),
         );
@@ -300,21 +257,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ---------------------------------------------------------
-// AppDrawer Widget Tanımı
-// ---------------------------------------------------------
+// AppDrawer Kodu
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // TODO: [Auth] Burayı gerçek Auth Provider'dan okuyun
-    const bool isLoggedIn = false; // Geçici
+    // Gerçek giriş durumunu AuthProvider'dan al
+    final authProvider = context.watch<AuthProvider>();
+    final bool isLoggedIn = authProvider.isLoggedIn; // UI Test modunda bu true olacak
 
     return Drawer(
       child: Column(
         children: [
-          const DrawerHeader( /* ... İçerik aynı ... */
+          // HATA DÜZELTİLDİ: DrawerHeader'a child eklendi ve const yapıldı
+          const DrawerHeader(
             decoration: BoxDecoration(color: Colors.teal),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -324,21 +281,11 @@ class AppDrawer extends StatelessWidget {
                    children: [
                      Icon(Icons.pets, color: Colors.white, size: 35),
                      SizedBox(width: 12),
-                     Text(
-                      'PawCare',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold
-                      ),
-                    ),
+                     Text('PawCare', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
                    ],
                  ),
                  SizedBox(height: 8),
-                 Text(
-                   'Evcil dostlarınız için her şey',
-                   style: TextStyle(color: Color.fromRGBO(255, 255, 255, 0.8)),
-                 ),
+                 Text('Evcil dostlarınız için her şey', style: TextStyle(color: Color.fromRGBO(255, 255, 255, 0.8))),
               ],
             ),
           ),
@@ -346,62 +293,27 @@ class AppDrawer extends StatelessWidget {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                ListTile( /* Ana Sayfa */
+                ListTile(
                   leading: const Icon(Icons.home_outlined),
                   title: const Text('Ana Sayfa'),
                   tileColor: ModalRoute.of(context)?.settings.name == '/' || context.widget is HomeScreen
                       ? Colors.teal.withAlpha((255 * 0.1).round()) : null,
-                  onTap: () { /* ... onTap aynı ... */
+                  onTap: () {
                      if (ModalRoute.of(context)?.settings.name == '/' || context.widget is HomeScreen) {
                        Navigator.pop(context);
                     } else {
-                       Navigator.pushAndRemoveUntil(
-                         context,
-                         MaterialPageRoute(builder: (context) => const HomeScreen()),
-                         (route) => false,
-                       );
+                       Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const HomeScreen()), (route) => false);
                     }
                   },
                 ),
-                // --- Giriş Yapmış Kullanıcı Menüsü ---
-                // 'dead_code' uyarısı normal
                 if (isLoggedIn) ...[
-                   ListTile( /* Evcil Hayvanlarım */
-                    leading: const Icon(Icons.pets_outlined),
-                    title: const Text('Evcil Hayvanlarım'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const PetsListScreen()));
-                    },
-                  ),
-                  ListTile( /* Aşı Takvimi */
-                    leading: const Icon(Icons.medical_services_outlined),
-                    title: const Text('Aşı Takvimi'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const VaccinationScreen()));
-                    },
-                  ),
-                  ListTile( /* İlaçlar */
-                    leading: const Icon(Icons.medication_outlined),
-                    title: const Text('İlaçlar'),
-                    onTap: () {
-                       Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const MedicationScreen()));
-                    },
-                  ),
-                  ListTile( /* Veteriner Bul */
-                    leading: const Icon(Icons.location_on_outlined),
-                    title: const Text('Veteriner Bul'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const FindVetScreen()));
-                    },
-                  ),
+                   ListTile(leading: const Icon(Icons.pets_outlined), title: const Text('Evcil Hayvanlarım'), onTap: () {Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (context)=> const PetsListScreen()));}),
+                   ListTile(leading: const Icon(Icons.medical_services_outlined), title: const Text('Aşı Takvimi'), onTap: () {Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (context)=> const VaccinationScreen()));}),
+                   ListTile(leading: const Icon(Icons.medication_outlined), title: const Text('İlaçlar'), onTap: () {Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (context)=> const MedicationScreen()));}),
+                   ListTile(leading: const Icon(Icons.location_on_outlined), title: const Text('Veteriner Bul'), onTap: () {Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (context)=> const FindVetScreen()));}),
                 ],
-                // --- Herkes İçin Menü ---
                 const Divider(indent: 16, endIndent: 16),
-                ListTile( /* Ayarlar */
+                ListTile(
                   leading: const Icon(Icons.settings_outlined),
                   title: const Text('Ayarlar'),
                   onTap: () {
@@ -413,77 +325,54 @@ class AppDrawer extends StatelessWidget {
                 ),
               ],
             ),
-          ), // Expanded sonu
+          ),
           const Divider(indent: 16, endIndent: 16, height: 1),
-          // Giriş/Kayıt veya Çıkış Butonları
           if (!isLoggedIn)
-             _buildLoginSignupButtons(context) // Canlı kod
+             _buildLoginSignupButtons(context)
           else
-             _buildLogoutButton(context), // 'dead_code' uyarısı normal
-
+             _buildLogoutButton(context),
           const SafeArea(bottom: true, child: SizedBox(height: 0)),
         ],
       ),
     );
   }
 
-  // Giriş/Kayıt Butonlarını oluşturan yardımcı widget
+  // Bu metotlar Widget döndürüyor, 'body_might_complete_normally' hatası olmamalı
   Widget _buildLoginSignupButtons(BuildContext context){
      return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 15.0),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.login, size: 18),
-                label: const Text('Giriş Yap'),
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
-                },
-                style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.teal,
-                    side: BorderSide(color: Colors.teal.shade200), // const kaldırıldı
-                    padding: const EdgeInsets.symmetric(vertical: 12)),
-              ),
+            Expanded( // Giriş Yap butonu
+              child: TextButton(onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginScreen())); }, child: const Text('Giriş Yap')),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.person_add_alt_1, size: 18),
-                label: const Text('Kayıt Ol'),
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const SignUpScreen()));
-                },
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12)),
-              ),
+            const SizedBox(width: 8),
+            Expanded( // Kayıt Ol butonu
+              child: ElevatedButton(onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (context) => const SignUpScreen())); }, child: const Text('Kayıt Ol')),
             ),
           ],
-        ),
+        )
       );
   }
 
-   // Çıkış Yap Butonunu oluşturan yardımcı widget
    Widget _buildLogoutButton(BuildContext context){
-     // Bu blok 'dead_code' uyarısı alacaktır
       return Padding(
          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 15.0),
          child: TextButton.icon(
-           icon: const Icon(Icons.logout, color: Colors.red),
-           label: const Text('Çıkış Yap', style: TextStyle(color: Colors.red)),
+           icon: const Icon(Icons.logout),
+           label: const Text('Çıkış Yap'),
            onPressed: () {
-             // TODO: [Auth] Gerçek Çıkış Yapma İşlemini Burada Yap
-             Navigator.pop(context);
-             ScaffoldMessenger.of(context).showSnackBar(
-                 const SnackBar(content: Text("Çıkış yapıldı (Simülasyon).")));
-             // TODO: [Navigation] Kullanıcıyı giriş ekranına yönlendir
+             // AuthProvider'dan logout metodunu çağır
+             context.read<AuthProvider>().logout();
+             debugPrint("Çıkış Yap tıklandı ve AuthProvider.logout() çağrıldı.");
+             // İsteğe bağlı: Kullanıcıyı giriş ekranına yönlendirebilirsiniz.
+             // Navigator.of(context).pushAndRemoveUntil(
+             //   MaterialPageRoute(builder: (context) => const LoginScreen()),
+             //   (route) => false,
+             // );
            },
-           style: TextButton.styleFrom(alignment: Alignment.centerLeft),
-         ),
+         )
        );
    }
 }
